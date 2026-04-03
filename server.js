@@ -14,7 +14,7 @@ const app = express();
 const server = createServer(app);
 export const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://social-media-application-frontend-vl2g.onrender.com",
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 4000;
 app.use(express.json());
 
 app.use(cors({
-  origin: "http://localhost:5173", // 🔹 frontend URL
+  origin: "https://social-media-application-frontend-vl2g.onrender.com", // 🔹 frontend URL
   credentials: true               // 🔹 allow cookies/auth headers
 }));
 
