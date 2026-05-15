@@ -29,6 +29,8 @@ app.use(cors({
   credentials: true               // 🔹 allow cookies/auth headers
 }));
 
+app.options('*', cors());
+
 // Routes
 app.get("/", (req, res) => {
   res.send("Hello My Fellow Bro");
