@@ -15,6 +15,7 @@ import {
   userLogin,
   userRegistration
 } from "../../Controller/userController/userController.js";
+import { fetchingUsers } from "../../Controller/userController/userController.js";
 
 import upload from "../../Config/multer.js";
 import protectUser from "../../Middleware/AuthMiddleware/AuthMiddleware.js";
@@ -24,6 +25,12 @@ const userRouter = express.Router();
 // ==============================
 // USER AUTH
 // ==============================
+
+userRouter.get(
+  "/total/users/application/users",
+  protectUser,
+  fetchingUsers
+);
 
 // Register user
 userRouter.post(
