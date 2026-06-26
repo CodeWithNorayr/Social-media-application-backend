@@ -316,7 +316,12 @@ const otpVerification = async (req, res) => {
       text: `Your OTP is ${otp}. Verify your account using this otp`
     };
 
-    await transporter.sendMail(mailOptions);
+    await transporter.verify();
+console.log("SMTP Connected");
+
+await transporter.sendMail(mailOptions);
+
+console.log("Mail Sent");
 
     return res.json({
       success: true,
