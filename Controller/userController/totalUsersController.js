@@ -2,7 +2,7 @@ import User from "../../Model/User/User.js";
 
 // Fetching all website users 
 
-export const fetchingUsers = async (_, res) => {
+const fetchingUsers = async (_, res) => {
   try {
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
@@ -28,3 +28,5 @@ export const fetchingUsers = async (_, res) => {
     });
   }
 };
+
+export default fetchingUsers;
