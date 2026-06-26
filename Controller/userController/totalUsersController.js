@@ -27,5 +27,3 @@ export const fetchingUsers = async (_, res) => {
     });
   }
 };
-
-export default fetchingUsers;
