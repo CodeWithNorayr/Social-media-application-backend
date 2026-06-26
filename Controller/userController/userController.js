@@ -131,7 +131,7 @@ const userLogin = async (req, res) => {
     });
   }
 
-  const token = generateToken(user.id);
+  const token = generateToken(user._id);
 
   return res.status(200).json({
     success: true,
@@ -385,7 +385,7 @@ const accountVerification = async (req, res) => {
 };
 
 
-const resetOtp = async () => {
+const resetOtp = async (req,res) => {
   try {
     const userId = req.user._id;
 
