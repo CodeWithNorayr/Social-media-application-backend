@@ -5,7 +5,7 @@ import User from "../../Model/User/User.js";
 import { io, userSocketMap } from "../../server.js";
 
 /* ================================
-   GET UNSEEN MESSAGES (OPTIMIZED)
+   GET UNSEEN MESSAGES
 ================================ */
 const unseenMessages = async (req, res) => {
   try {
@@ -27,18 +27,14 @@ const unseenMessages = async (req, res) => {
     ]);
 
     const result = {};
-
-    unseen.forEach((item) => {
+    unseen.forEach(item => {
       result[item._id.toString()] = item.count;
     });
 
-    return res.json({
-      success: true,
-      unseenMessages: result
-    });
+    return res.json({ success: true, unseenMessages: result });
 
   } catch (error) {
-    console.error("UNSEEN MESSAGES ERROR:", error);
+    console.error(error);
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -54,13 +50,6 @@ const getUserMessages = async (req, res) => {
     const userId = req.user._id;
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
     const messages = await Message.find({
       $or: [
         { senderId: userId, receiverId: id },
@@ -68,142 +57,84 @@ const getUserMessages = async (req, res) => {
       ]
     }).sort({ createdAt: 1 });
 
-    // Mark as seen (bulk update)
     await Message.updateMany(
       { senderId: id, receiverId: userId, seen: false },
-      { $set: { seen: true } }
+      { seen: true }
     );
 
-    return res.json({
-      success: true,
-      messages
-    });
+    return res.json({ success: true, messages });
 
   } catch (error) {
-    console.error("GET MESSAGES ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 /* ================================
-   MARK MESSAGES AS SEEN
+   MARK SEEN
 ================================ */
 const markMessagesSeen = async (req, res) => {
   try {
     const userId = req.user._id;
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
     await Message.updateMany(
       { senderId: id, receiverId: userId, seen: false },
-      { $set: { seen: true } }
+      { seen: true }
     );
 
-    return res.status(200).json({
-      success: true,
-      message: "Messages marked as seen"
-    });
+    return res.json({ success: true, message: "Seen updated" });
 
   } catch (error) {
-    console.error("MARK SEEN ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
 /* ================================
-   SEND MESSAGE (TEXT + IMAGE)
+   SEND MESSAGE (FIXED SOCKET SAFE)
 ================================ */
 const sendMessage = async (req, res) => {
   try {
     const senderId = req.user._id;
     const receiverId = req.params.id;
-
     const text = req.body.text?.trim();
     const image = req.file;
-
-    if (!mongoose.Types.ObjectId.isValid(receiverId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid receiver ID"
-      });
-    }
 
     if (!text && !image) {
       return res.status(400).json({
         success: false,
-        message: "Text or image is required"
-      });
-    }
-
-    // check receiver exists
-    const receiver = await User.findById(receiverId);
-    if (!receiver) {
-      return res.status(404).json({
-        success: false,
-        message: "Receiver not found"
+        message: "Text or image required"
       });
     }
 
     let imageUrl = null;
 
     if (image) {
-      if (!image.mimetype?.startsWith("image/")) {
-        return res.status(400).json({
-          success: false,
-          message: "Only image files are allowed"
-        });
-      }
-
       const upload = await cloudinary.uploader.upload(image.path, {
         folder: "messages/images"
       });
-
       imageUrl = upload.secure_url;
     }
 
-    const newMessage = await Message.create({
+    const message = await Message.create({
       senderId,
       receiverId,
       text,
-      image: imageUrl,
-      seen: false
+      image: imageUrl
     });
 
-    // ================= SOCKET.IO =================
-    const receiverSocketId = userSocketMap?.[receiverId.toString()];
-    const senderSocketId = userSocketMap?.[senderId.toString()];
+    // SOCKET SAFE
+    const receiverSocket = userSocketMap[receiverId];
+    const senderSocket = userSocketMap[senderId];
 
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
-    }
+    if (receiverSocket) io.to(receiverSocket).emit("newMessage", message);
+    if (senderSocket) io.to(senderSocket).emit("newMessage", message);
 
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("newMessage", newMessage);
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: newMessage
-    });
+    return res.status(201).json({ success: true, message });
 
   } catch (error) {
-    console.error("SEND MESSAGE ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
