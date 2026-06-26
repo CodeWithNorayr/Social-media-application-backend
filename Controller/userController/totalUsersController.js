@@ -2,16 +2,16 @@ import User from "../../Model/User/User.js";
 
 // Fetching all website users 
 
-const fetchingUsers = async ( _, res ) => {
+export const fetchingUsers = async (_, res) => {
   try {
     const users = await User.find().select("-password").sort({ createdAt: -1 });
 
-    if (users.length === 0) {
+    if (!users.length) {
       return res.status(404).json({
         success: false,
         message: "No one is registered yet"
       });
-    };
+    }
 
     return res.status(200).json({
       success: true,
@@ -26,6 +26,7 @@ const fetchingUsers = async ( _, res ) => {
       message: "Failed to fetch users",
     });
   }
+};
 }
 
 export default fetchingUsers;
