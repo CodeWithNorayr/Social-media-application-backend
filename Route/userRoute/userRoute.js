@@ -1,52 +1,136 @@
 import express from "express";
-import { acceptFriendRequest, accountVerification, deleteUser, followUser, getUserConnections, getUserProfile, otpVerification, resetOtp, sendConnectionRequest, submitingUserPassword, unfollowUser, updateUserProfile, userLogin, userRegistration } from "../../Controller/userController/userController.js";
+import {
+  acceptFriendRequest,
+  accountVerification,
+  deleteUser,
+  followUser,
+  getUserConnections,
+  getUserProfile,
+  otpVerification,
+  resetOtp,
+  sendConnectionRequest,
+  submitingUserPassword,
+  unfollowUser,
+  updateUserProfile,
+  userLogin,
+  userRegistration
+} from "../../Controller/userController/userController.js";
+
 import upload from "../../Config/multer.js";
 import protectUser from "../../Middleware/AuthMiddleware/AuthMiddleware.js";
 
 const userRouter = express.Router();
 
-// Routes for User model or userController
+// ==============================
+// USER AUTH
+// ==============================
 
-// ....................User account operations.........................
+// Register user
+userRouter.post(
+  "/user-registration",
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "coverPhoto", maxCount: 1 }
+  ]),
+  userRegistration
+);
 
-// @Post request for userRegistration
-userRouter.post('/user-registration', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'coverPhoto', maxCount: 1 }]), userRegistration);
-// @Post request for userLoggin
-userRouter.post('/user-loggin', userLogin);
-// @Get request get user profile
-userRouter.get('/user-profile-page', protectUser, getUserProfile);
-// @Put request for updating user-profile
-userRouter.put('/update-user-profile', upload.fields([{ name: "image", maxCount: 1 }, { name: "covers", maxCount: 1 }]), protectUser, updateUserProfile);
-// @Delete request for deleting for deleteUser
-userRouter.delete('/delete-user-account', protectUser, deleteUser);
+// Login user (FIXED SPELLING OPTIONAL)
+userRouter.post("/user-login", userLogin);
 
-// ....................Account verification operations...................
+// ==============================
+// USER PROFILE
+// ==============================
 
-// @Post request for otpVerification
-userRouter.post('/user-otpVerification', protectUser, otpVerification);
-// @Post request for verifingAccount
-userRouter.post('/user-verifing-account', protectUser, accountVerification);
-// @Post request for resetOtp
-userRouter.post('/user-resetingOtp', protectUser, resetOtp);
-// @Post request for submitingUserNewPassword
-userRouter.post('/user-passwordChanging', protectUser, submitingUserPassword);
+// Get profile
+userRouter.get(
+  "/user-profile-page",
+  protectUser,
+  getUserProfile
+);
 
+// Update profile (FIXED FIELD + ORDER)
+userRouter.put(
+  "/update-user-profile",
+  protectUser,
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "coverPhoto", maxCount: 1 } // FIXED
+  ]),
+  updateUserProfile
+);
 
-// ....................User follow / unfollow............................
+// Delete account
+userRouter.delete(
+  "/delete-user-account",
+  protectUser,
+  deleteUser
+);
 
-// @Post request for following users
-userRouter.post('/follow-user/:id', protectUser, followUser);
-// @Post request for unfollowing users
-userRouter.post('/unfollow-user/:id', protectUser, unfollowUser);
+// ==============================
+// OTP / ACCOUNT VERIFICATION
+// ==============================
 
-//.....................Friend requests and connections....................
+userRouter.post(
+  "/user-otp-verification",
+  protectUser,
+  otpVerification
+);
 
-//@Post request for sending a friend request
-userRouter.post('/connection/send/:id', protectUser, sendConnectionRequest);
-// @Get request for getting following followers connections of user account
-userRouter.get('/connections', protectUser, getUserConnections);
-// @Post request for accepting friends
-userRouter.post('/connection/accept/:id', protectUser, acceptFriendRequest);
+userRouter.post(
+  "/user-account-verification",
+  protectUser,
+  accountVerification
+);
 
+userRouter.post(
+  "/user-reset-otp",
+  protectUser,
+  resetOtp
+);
+
+userRouter.post(
+  "/user-reset-password",
+  protectUser,
+  submitingUserPassword
+);
+
+// ==============================
+// FOLLOW SYSTEM
+// ==============================
+
+userRouter.post(
+  "/follow-user/:id",
+  protectUser,
+  followUser
+);
+
+userRouter.post(
+  "/unfollow-user/:id",
+  protectUser,
+  unfollowUser
+);
+
+// ==============================
+// FRIEND CONNECTION SYSTEM
+// ==============================
+
+userRouter.post(
+  "/connection/send/:id",
+  protectUser,
+  sendConnectionRequest
+);
+
+userRouter.get(
+  "/connections",
+  protectUser,
+  getUserConnections
+);
+
+userRouter.post(
+  "/connection/accept/:id",
+  protectUser,
+  acceptFriendRequest
+);
 
 export default userRouter;
