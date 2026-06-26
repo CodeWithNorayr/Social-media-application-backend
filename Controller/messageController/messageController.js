@@ -11,14 +11,6 @@ const unseenMessages = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const userExists = await User.findById(userId);
-    if (!userExists) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
     const unseen = await Message.aggregate([
       {
         $match: {
@@ -35,7 +27,8 @@ const unseenMessages = async (req, res) => {
     ]);
 
     const result = {};
-    unseen.forEach(item => {
+
+    unseen.forEach((item) => {
       result[item._id.toString()] = item.count;
     });
 
@@ -45,7 +38,7 @@ const unseenMessages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("UNSEEN MESSAGES ERROR:", error);
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -75,10 +68,10 @@ const getUserMessages = async (req, res) => {
       ]
     }).sort({ createdAt: 1 });
 
-    // Mark messages as seen (from other user → current user)
+    // Mark as seen (bulk update)
     await Message.updateMany(
       { senderId: id, receiverId: userId, seen: false },
-      { seen: true }
+      { $set: { seen: true } }
     );
 
     return res.json({
@@ -87,7 +80,7 @@ const getUserMessages = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("GET MESSAGES ERROR:", error);
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -96,7 +89,7 @@ const getUserMessages = async (req, res) => {
 };
 
 /* ================================
-   MARK ALL MESSAGES AS SEEN (BETTER UX)
+   MARK MESSAGES AS SEEN
 ================================ */
 const markMessagesSeen = async (req, res) => {
   try {
@@ -112,7 +105,7 @@ const markMessagesSeen = async (req, res) => {
 
     await Message.updateMany(
       { senderId: id, receiverId: userId, seen: false },
-      { seen: true }
+      { $set: { seen: true } }
     );
 
     return res.status(200).json({
@@ -121,7 +114,7 @@ const markMessagesSeen = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("MARK SEEN ERROR:", error);
     return res.status(500).json({
       success: false,
       message: "Server error"
@@ -134,10 +127,11 @@ const markMessagesSeen = async (req, res) => {
 ================================ */
 const sendMessage = async (req, res) => {
   try {
+    const senderId = req.user._id;
+    const receiverId = req.params.id;
+
     const text = req.body.text?.trim();
     const image = req.file;
-    const receiverId = req.params.id;
-    const senderId = req.user._id;
 
     if (!mongoose.Types.ObjectId.isValid(receiverId)) {
       return res.status(400).json({
@@ -153,8 +147,9 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    const receiverUser = await User.findById(receiverId);
-    if (!receiverUser) {
+    // check receiver exists
+    const receiver = await User.findById(receiverId);
+    if (!receiver) {
       return res.status(404).json({
         success: false,
         message: "Receiver not found"
@@ -164,10 +159,10 @@ const sendMessage = async (req, res) => {
     let imageUrl = null;
 
     if (image) {
-      if (!image.mimetype.startsWith("image/")) {
+      if (!image.mimetype?.startsWith("image/")) {
         return res.status(400).json({
           success: false,
-          message: "Only images are allowed"
+          message: "Only image files are allowed"
         });
       }
 
@@ -179,15 +174,16 @@ const sendMessage = async (req, res) => {
     }
 
     const newMessage = await Message.create({
-      text,
       senderId,
       receiverId,
-      image: imageUrl
+      text,
+      image: imageUrl,
+      seen: false
     });
 
-    /* ========= SOCKET.IO ========= */
-    const receiverSocketId = userSocketMap[receiverId.toString()];
-    const senderSocketId = userSocketMap[senderId.toString()];
+    // ================= SOCKET.IO =================
+    const receiverSocketId = userSocketMap?.[receiverId.toString()];
+    const senderSocketId = userSocketMap?.[senderId.toString()];
 
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -199,11 +195,11 @@ const sendMessage = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      data: newMessage
+      message: newMessage
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("SEND MESSAGE ERROR:", error);
     return res.status(500).json({
       success: false,
       message: "Server error"
